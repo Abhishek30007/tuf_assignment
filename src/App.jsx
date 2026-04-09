@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
 import CalendarCard from './components/CalendarCard';
-import LiquidGlassBackground from './components/LiquidGlassBackground';
 import NotesPanel from './components/NotesPanel';
+import LiquidGlassBackground from './components/LiquidGlassBackground';
 
 const NOTES_STORAGE_KEY = 'antigravity-calendar-notes-v1';
 const MONTH_EDITORIAL = {
@@ -367,9 +367,10 @@ function App() {
 
   return (
     <div className="relative min-h-screen overflow-hidden px-6 py-6 text-slate-50 sm:px-8 sm:py-8 lg:px-12 lg:py-10 xl:px-16">
+      <div className="fixed inset-0 z-[-20] bg-[#020617] pointer-events-none" />
       <LiquidGlassBackground theme={currentTheme} />
 
-      <div className="relative mx-auto flex min-h-[calc(100vh-5rem)] max-w-[86rem] flex-col justify-center">
+      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-5rem)] max-w-[86rem] flex-col justify-center">
         <MotionHeader
           initial={{ opacity: 0, y: 36 }}
           whileInView={{ opacity: 1, y: 0 }}

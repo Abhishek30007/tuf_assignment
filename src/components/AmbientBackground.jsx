@@ -1,6 +1,7 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
+
 const ORB_SPECS = [
   {
     id: 'orb-a',
