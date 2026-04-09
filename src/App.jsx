@@ -1,12 +1,61 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
-import { motion } from 'framer-motion';
-import { MoonStar, Sparkles } from 'lucide-react';
-import AmbientBackground from './components/AmbientBackground';
+import { AnimatePresence, motion } from 'framer-motion';
 import CalendarCard from './components/CalendarCard';
+import LiquidGlassBackground from './components/LiquidGlassBackground';
 import NotesPanel from './components/NotesPanel';
 
 const NOTES_STORAGE_KEY = 'antigravity-calendar-notes-v1';
+const MONTH_EDITORIAL = {
+  0: {
+    title: 'Winter whispers through frosted glass.',
+    subtitle: 'A crystal-clear stage for your new year resolutions.',
+  },
+  1: {
+    title: 'Love notes in a digital orbit.',
+    subtitle: 'Capturing moments of connection in a weightless environment.',
+  },
+  2: {
+    title: 'March notes descend like floating film cards.',
+    subtitle: 'A frosted calendar on the left, a larger note stage on the right.',
+  },
+  3: {
+    title: 'Spring rains refresh the glass interface.',
+    subtitle: 'Watch your tasks bloom as the season turns.',
+  },
+  4: {
+    title: 'Lush greenery meets translucent design.',
+    subtitle: 'Navigating through the vibrant energy of late spring.',
+  },
+  5: {
+    title: 'Golden hour glows behind the grid.',
+    subtitle: 'Long days and floating plans under a summer sun.',
+  },
+  6: {
+    title: 'Deep blue horizons in every scroll.',
+    subtitle: 'Your summer itinerary, drifting like a calm tide.',
+  },
+  7: {
+    title: 'Thermal heat ripples the frosted stage.',
+    subtitle: 'High summer notes captured in a shimmering glass state.',
+  },
+  8: {
+    title: 'Autumnal embers glow behind the glass.',
+    subtitle: 'Harvesting ideas as the year begins its graceful descent.',
+  },
+  9: {
+    title: 'Moody mists mask the floating planner.',
+    subtitle: 'Spooky notes and atmospheric transitions.',
+  },
+  10: {
+    title: 'Cozy shadows and crisp glass edges.',
+    subtitle: 'Preparing for the frost with a focused, tactile stage.',
+  },
+  11: {
+    title: 'Stardust settles on the winter grid.',
+    subtitle: 'A celebratory end to a year of floating memories.',
+  },
+};
 const MONTH_THEMES = {
   0: {
     name: 'january',
@@ -217,8 +266,53 @@ function buildSelectionMeta(startDate, endDate, mode) {
   };
 }
 
-function App() {
+function EditorialHeadline({ monthKey, title, subtitle }) {
   const MotionDiv = motion.div;
+  const MotionSpan = motion.span;
+
+  return (
+    <AnimatePresence mode="wait">
+      <MotionDiv
+        key={monthKey}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0, transition: { duration: 0.22 } }}
+        transition={{ duration: 0.3 }}
+      >
+        <h1 className="mt-5 text-4xl font-semibold tracking-[-0.04em] text-white [font-family:var(--font-editorial)] sm:text-5xl lg:text-6xl">
+          {title.split('').map((character, index) => (
+            <MotionSpan
+              key={`${monthKey}-${character}-${index}`}
+              initial={{ opacity: 0, y: -52, rotateX: -85 }}
+              animate={{ opacity: 1, y: 0, rotateX: 0 }}
+              transition={{
+                duration: 0.45,
+                delay: index * 0.018,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              className="inline-block will-change-transform"
+              style={{ whiteSpace: character === ' ' ? 'pre' : 'normal' }}
+            >
+              {character}
+            </MotionSpan>
+          ))}
+        </h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12 }}
+          transition={{ duration: 0.45, delay: 0.08 }}
+          className="mt-4 text-sm leading-7 text-slate-200/76 sm:text-base"
+        >
+          {subtitle}
+        </motion.p>
+      </MotionDiv>
+    </AnimatePresence>
+  );
+}
+
+function App() {
   const MotionHeader = motion.header;
   const MotionSection = motion.section;
   const [currentMonth, setCurrentMonth] = useState(() => new Date(2026, 2, 1));
@@ -226,7 +320,6 @@ function App() {
   const [startDate, setStartDate] = useState(() => new Date(2026, 2, 11));
   const [endDate, setEndDate] = useState(null);
   const [hoveredDate, setHoveredDate] = useState(null);
-  const [darkMode, setDarkMode] = useState(true);
   const [notesBySelection, setNotesBySelection] = useState(() => {
     try {
       const savedNotes = localStorage.getItem(NOTES_STORAGE_KEY);
@@ -260,6 +353,8 @@ function App() {
   const activeMeta = selectedMeta.key !== 'empty' ? selectedMeta : hoveredMeta;
   const activeNote = activeMeta.key === 'empty' ? '' : notesBySelection[activeMeta.key] ?? '';
   const currentTheme = MONTH_THEMES[currentMonth.getMonth()] ?? MONTH_THEMES[0];
+  const currentEditorial = MONTH_EDITORIAL[currentMonth.getMonth()] ?? MONTH_EDITORIAL[0];
+  const currentMonthKey = format(currentMonth, 'yyyy-MM');
 
   const handleNoteChange = (value) => {
     if (!selectedMeta.editable || selectedMeta.key === 'empty') return;
@@ -271,37 +366,31 @@ function App() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden px-6 py-8 text-slate-50 sm:px-8 sm:py-10 lg:px-12 lg:py-12 xl:px-16">
-      <AmbientBackground palette={currentTheme} />
+    <div className="relative min-h-screen overflow-hidden px-6 py-6 text-slate-50 sm:px-8 sm:py-8 lg:px-12 lg:py-10 xl:px-16">
+      <LiquidGlassBackground theme={currentTheme} />
 
-      <div className="relative mx-auto flex min-h-[calc(100vh-7rem)] max-w-[86rem] flex-col justify-center">
+      <div className="relative mx-auto flex min-h-[calc(100vh-5rem)] max-w-[86rem] flex-col justify-center">
         <MotionHeader
           initial={{ opacity: 0, y: 36 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.6 }}
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          className="mx-auto mb-10 max-w-3xl px-2 text-center lg:mb-14"
+          className="mb-6 max-w-4xl px-2 lg:mb-8"
         >
-          <span
-            className={`inline-flex items-center rounded-full border bg-white/8 px-4 py-1 text-xs uppercase tracking-[0.35em] backdrop-blur-xl ${currentTheme.badgeText}`}
-            style={{ borderColor: currentTheme.accentBorder }}
-          >
-            Antigravity Calendar
-          </span>
-          <h1 className="mt-5 text-4xl font-semibold tracking-[-0.04em] text-white [font-family:var(--font-display)] sm:text-5xl lg:text-6xl">
-            March notes descend like floating film cards.
-          </h1>
-          <p className="mt-4 text-sm leading-7 text-slate-200/76 sm:text-base">
-            A frosted calendar on the left, a larger note stage on the right, and motion that makes each selected day feel physically placed into the scene.
-          </p>
+          <EditorialHeadline
+            monthKey={currentMonthKey}
+            title={currentEditorial.title}
+            subtitle={currentEditorial.subtitle}
+          />
         </MotionHeader>
 
-        <div className="grid items-start gap-8 lg:grid-cols-[0.82fr_1.18fr] lg:gap-12 xl:gap-14">
+        <div className="grid flex-1 items-stretch gap-6 lg:grid-cols-[1fr_1fr] lg:gap-8 xl:gap-10">
           <MotionSection
-            initial={{ opacity: 0, y: 42 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 42, x: 38 }}
+            whileInView={{ opacity: 1, y: 0, x: 0 }}
             viewport={{ once: true, amount: 0.25 }}
             transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
+            className="h-full"
           >
             <CalendarCard
               currentMonth={currentMonth}
@@ -315,16 +404,15 @@ function App() {
               hoveredDate={hoveredDate}
               setHoveredDate={setHoveredDate}
               theme={currentTheme}
-              darkMode={darkMode}
             />
           </MotionSection>
 
           <MotionSection
-            initial={{ opacity: 0, y: 52 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 52, x: 38 }}
+            whileInView={{ opacity: 1, y: 0, x: 0 }}
             viewport={{ once: true, amount: 0.25 }}
             transition={{ duration: 0.95, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
-            className="lg:pt-6"
+            className="h-full"
           >
             <NotesPanel
               noteKey={activeMeta.key}
@@ -341,29 +429,6 @@ function App() {
           </MotionSection>
         </div>
       </div>
-
-      <MotionDiv
-        initial={{ opacity: 0, y: 18 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, delay: 0.2 }}
-        className="pointer-events-none fixed inset-x-0 bottom-5 z-30 flex justify-center px-6"
-      >
-        <button
-          type="button"
-          onClick={() => setDarkMode((value) => !value)}
-          className="pointer-events-auto inline-flex items-center gap-3 rounded-full border border-white/15 bg-slate-950/35 px-5 py-3 text-sm text-slate-100 shadow-[0_12px_30px_rgba(2,6,23,0.34)] backdrop-blur-xl transition-transform hover:-translate-y-0.5"
-          style={{ borderColor: currentTheme.accentBorder, boxShadow: `0 12px 30px rgba(2, 6, 23, 0.34), inset 0 1px 0 ${currentTheme.accentBorder}` }}
-          aria-pressed={darkMode}
-        >
-          <span className="inline-flex items-center gap-2">
-            <MoonStar size={16} className={currentTheme.iconText} />
-            <Sparkles size={14} className="text-slate-100/70" />
-          </span>
-          <span className="uppercase tracking-[0.28em] text-[0.7rem] text-slate-200/82">
-            {darkMode ? 'Dark Mode' : 'Light Mode'}
-          </span>
-        </button>
-      </MotionDiv>
     </div>
   );
 }

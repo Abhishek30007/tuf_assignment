@@ -1,5 +1,5 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   addMonths,
   eachDayOfInterval,
@@ -12,9 +12,8 @@ import {
   isWithinInterval,
   startOfMonth,
   startOfWeek,
-  subMonths,
 } from 'date-fns';
-import { CalendarDays, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -37,45 +36,164 @@ const MONTH_IMAGES = [
   'https://images.unsplash.com/photo-1551524559-8af4e6624178?auto=format&fit=crop&q=80&w=800',
 ];
 
+const WHEEL_OFFSETS = [-1, 0, 1];
+
 const monthVariants = {
-  enter: (direction) => ({
-    opacity: 0,
-    x: direction > 0 ? 64 : -64,
-  }),
+  enter: (direction) => ({ opacity: 0, x: direction > 0 ? 50 : -50 }),
   center: {
     opacity: 1,
     x: 0,
     transition: {
-      duration: 0.45,
+      duration: 0.42,
       ease: [0.22, 1, 0.36, 1],
-      staggerChildren: 0.018,
-      delayChildren: 0.04,
+      staggerChildren: 0.015,
+      delayChildren: 0.02,
     },
   },
   exit: (direction) => ({
     opacity: 0,
-    x: direction > 0 ? -64 : 64,
-    transition: {
-      duration: 0.3,
-      ease: [0.55, 0, 0.55, 0.2],
-    },
+    x: direction > 0 ? -50 : 50,
+    transition: { duration: 0.26, ease: [0.55, 0, 0.55, 0.2] },
   }),
 };
 
 const dayVariants = {
-  enter: { opacity: 0, y: 18, scale: 0.92 },
+  enter: { opacity: 0, y: 10, scale: 0.94 },
   center: {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: {
-      type: 'spring',
-      stiffness: 280,
-      damping: 22,
-      mass: 0.8,
-    },
+    transition: { type: 'spring', stiffness: 280, damping: 22, mass: 0.82 },
   },
 };
+
+function wrapMonth(monthIndex) {
+  return ((monthIndex % 12) + 12) % 12;
+}
+
+function MonthYearWheel({ currentMonth, setCurrentMonth, setMonthDirection }) {
+  const MotionButton = motion.button;
+  const MotionDiv = motion.div;
+  const monthIndex = currentMonth.getMonth();
+  const yearValue = currentMonth.getFullYear();
+  const monthNames = Array.from({ length: 12 }, (_, index) =>
+    format(new Date(2026, index, 1), 'MMMM'),
+  );
+  const [expandedWheel, setExpandedWheel] = useState(null);
+
+  const shiftMonth = (delta) => {
+    if (!delta) return;
+    setMonthDirection(delta > 0 ? 1 : -1);
+    setCurrentMonth(addMonths(currentMonth, delta));
+  };
+
+  const shiftYear = (delta) => {
+    if (!delta) return;
+    setMonthDirection(delta > 0 ? 1 : -1);
+    setCurrentMonth(new Date(yearValue + delta, monthIndex, 1));
+  };
+
+  const onMonthWheel = (event) => {
+    event.preventDefault();
+    shiftMonth(event.deltaY > 0 ? 1 : -1);
+  };
+
+  const onYearWheel = (event) => {
+    event.preventDefault();
+    shiftYear(event.deltaY > 0 ? 1 : -1);
+  };
+
+  const wheelItemClass = (offset) =>
+    cn(
+      'flex h-14 items-center justify-center font-medium transition-all duration-500',
+      offset === 0 ? 'text-white' : 'text-white/30',
+    );
+
+  const wheelItemStyle = (offset) => ({
+    transform: `perspective(1000px) rotateX(${offset * 18}deg) scale(${offset === 0 ? 1 : 0.86})`,
+    opacity: offset === 0 ? 1 : 0.34,
+  });
+
+  return (
+    <div className="grid grid-cols-[1.55fr_0.95fr] gap-5">
+      <div
+        onWheel={onMonthWheel}
+        onMouseEnter={() => setExpandedWheel('month')}
+        onMouseLeave={() => setExpandedWheel((current) => (current === 'month' ? null : current))}
+        className="relative overflow-hidden rounded-[2rem] bg-white/[0.05] px-3 py-3 backdrop-blur-3xl"
+      >
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0))]" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-[linear-gradient(0deg,rgba(255,255,255,0.08),rgba(255,255,255,0))]" />
+        <MotionDiv
+          animate={{ height: expandedWheel === 'month' ? 182 : 82 }}
+          transition={{ type: 'spring', stiffness: 90, damping: 22, mass: 1.2 }}
+          className="relative overflow-hidden"
+        >
+          <MotionDiv
+            animate={{ y: expandedWheel === 'month' ? 0 : -58 }}
+            transition={{ type: 'spring', stiffness: 80, damping: 24, mass: 1.1 }}
+            className="flex flex-col pt-2"
+          >
+            {WHEEL_OFFSETS.map((offset) => {
+              const label = monthNames[wrapMonth(monthIndex + offset)];
+              return (
+                <MotionButton
+                  key={`month-${label}-${offset}`}
+                  whileTap={{ scale: 0.985 }}
+                  onClick={() => shiftMonth(offset)}
+                  className={wheelItemClass(offset)}
+                  style={wheelItemStyle(offset)}
+                >
+                  <span className={offset === 0 ? 'text-4xl font-semibold tracking-[-0.05em]' : 'text-2xl'}>
+                    {label}
+                  </span>
+                </MotionButton>
+              );
+            })}
+          </MotionDiv>
+        </MotionDiv>
+      </div>
+
+      <div
+        onWheel={onYearWheel}
+        onMouseEnter={() => setExpandedWheel('year')}
+        onMouseLeave={() => setExpandedWheel((current) => (current === 'year' ? null : current))}
+        className="relative overflow-hidden rounded-[2rem] bg-white/[0.05] px-3 py-3 backdrop-blur-3xl"
+      >
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0))]" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-[linear-gradient(0deg,rgba(255,255,255,0.08),rgba(255,255,255,0))]" />
+        <MotionDiv
+          animate={{ height: expandedWheel === 'year' ? 182 : 82 }}
+          transition={{ type: 'spring', stiffness: 90, damping: 22, mass: 1.2 }}
+          className="relative overflow-hidden"
+        >
+          <MotionDiv
+            animate={{ y: expandedWheel === 'year' ? 0 : -58 }}
+            transition={{ type: 'spring', stiffness: 80, damping: 24, mass: 1.1 }}
+            className="flex flex-col pt-2"
+          >
+            {WHEEL_OFFSETS.map((offset) => {
+              const year = yearValue + offset;
+              return (
+                <MotionButton
+                  key={`year-${year}`}
+                  whileTap={{ scale: 0.985 }}
+                  onClick={() => shiftYear(offset)}
+                  className={wheelItemClass(offset)}
+                  style={wheelItemStyle(offset)}
+                >
+                  <span className={offset === 0 ? 'text-4xl font-semibold tracking-[-0.05em]' : 'text-2xl'}>
+                    {year}
+                  </span>
+                </MotionButton>
+              );
+            })}
+          </MotionDiv>
+        </MotionDiv>
+      </div>
+    </div>
+  );
+}
 
 export default function CalendarCard({
   currentMonth,
@@ -89,7 +207,6 @@ export default function CalendarCard({
   hoveredDate,
   setHoveredDate,
   theme,
-  darkMode,
 }) {
   const MotionButton = motion.button;
   const MotionDiv = motion.div;
@@ -117,20 +234,8 @@ export default function CalendarCard({
     setEndDate(day);
   };
 
-  const goToPreviousMonth = () => {
-    setMonthDirection(-1);
-    setCurrentMonth(subMonths(currentMonth, 1));
-  };
-
-  const goToNextMonth = () => {
-    setMonthDirection(1);
-    setCurrentMonth(addMonths(currentMonth, 1));
-  };
-
-  const isSelected = (day) => (
-    Boolean(startDate && isSameDay(day, startDate)) ||
-    Boolean(endDate && isSameDay(day, endDate))
-  );
+  const isSelected = (day) =>
+    Boolean(startDate && isSameDay(day, startDate)) || Boolean(endDate && isSameDay(day, endDate));
 
   const isInRange = (day) => {
     if (!startDate || !endDate) return false;
@@ -139,150 +244,154 @@ export default function CalendarCard({
 
   const isHovered = (day) => Boolean(hoveredDate && isSameDay(day, hoveredDate));
 
+  const stepMonth = (delta) => {
+    setMonthDirection(delta > 0 ? 1 : -1);
+    setCurrentMonth(addMonths(currentMonth, delta));
+  };
+
   return (
     <div
-      className="relative overflow-hidden rounded-[2.5rem] border border-white/20 bg-white/5 p-6 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] backdrop-blur-2xl sm:p-7 lg:p-8"
-      style={{ boxShadow: `0 32px 64px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 ${theme.accentBorder}` }}
+      className="relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/[0.045] p-5 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.52)] backdrop-blur-3xl sm:p-6 lg:p-7"
+      style={{ boxShadow: `0 32px 64px -12px rgba(0, 0, 0, 0.52), inset 0 1px 0 ${theme.accentBorder}` }}
     >
-      {/* Dynamic Background Highlight */}
       <div
-        className="pointer-events-none absolute -top-24 right-[-4.5rem] h-64 w-64 rounded-full blur-[100px] opacity-40"
+        className="pointer-events-none absolute -top-20 right-[-4rem] h-52 w-52 rounded-full blur-[100px] opacity-30"
         style={{ background: theme.accentSoft }}
       />
 
-      <div className="relative z-10 flex flex-col gap-6">
-        {/* Header Section */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div
-              className={`inline-flex items-center gap-2 rounded-full border bg-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.3em] font-medium ${theme.badgeText}`}
-              style={{ borderColor: theme.accentBorder }}
-            >
-              <Sparkles size={12} />
-              Floating planner
+      <div className="relative z-10 flex flex-col gap-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl bg-white/[0.05] p-3 backdrop-blur-3xl">
+              <CalendarDays className={theme.iconText} size={22} />
             </div>
-            <h2 className="mt-4 flex items-center gap-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-              <CalendarDays className={theme.iconText} size={28} />
-              {format(monthStart, 'MMMM yyyy')}
-            </h2>
+            <div>
+              <p className="text-[0.68rem] uppercase tracking-[0.32em] text-white/42">Date Navigator</p>
+              <h2 className="mt-1 text-xl font-semibold tracking-[-0.03em] text-white">
+                {format(monthStart, 'MMMM yyyy')}
+              </h2>
+            </div>
           </div>
 
-          <div className="flex gap-2 self-start">
+          <div className="flex items-center gap-2">
             <MotionButton
-              whileHover={{ y: -2, scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={goToPreviousMonth}
-              className="rounded-2xl border border-white/10 bg-white/5 p-3 text-white backdrop-blur-md transition-colors hover:bg-white/15"
-              style={{ borderColor: theme.accentBorder }}
+              whileHover={{ y: -2, scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => stepMonth(-1)}
+              className="rounded-full bg-white/[0.05] p-3 text-white/80 backdrop-blur-3xl"
+              aria-label="Previous month"
             >
-              <ChevronLeft size={20} />
+              <ChevronLeft size={18} />
             </MotionButton>
             <MotionButton
-              whileHover={{ y: -2, scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={goToNextMonth}
-              className="rounded-2xl border border-white/10 bg-white/5 p-3 text-white backdrop-blur-md transition-colors hover:bg-white/15"
-              style={{ borderColor: theme.accentBorder }}
+              whileHover={{ y: -2, scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => stepMonth(1)}
+              className="rounded-full bg-white/[0.05] p-3 text-white/80 backdrop-blur-3xl"
+              aria-label="Next month"
             >
-              <ChevronRight size={20} />
+              <ChevronRight size={18} />
             </MotionButton>
           </div>
         </div>
 
-        {/* Calendar Grid Container */}
+        <MonthYearWheel
+          currentMonth={currentMonth}
+          setCurrentMonth={setCurrentMonth}
+          setMonthDirection={setMonthDirection}
+        />
+
         <div className="relative overflow-hidden rounded-[2rem] border border-white/10">
-          {/* Background Image Layer */}
           <div className="absolute inset-0 z-0">
             <AnimatePresence mode="wait">
               <MotionImg
                 key={currentMonthIndex}
                 src={currentMonthImage}
-                initial={{ opacity: 0, scale: 1.1 }}
-                animate={{ opacity: darkMode ? 0.35 : 0.55, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.1 }}
-                transition={{ duration: 0.8, ease: "circOut" }}
+                initial={{ opacity: 0, scale: 1.08 }}
+                animate={{ opacity: 0.52, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.08 }}
+                transition={{ duration: 0.7, ease: 'circOut' }}
                 className="h-full w-full object-cover"
               />
             </AnimatePresence>
-            {/* Darker/Lighter Overlay for Legibility */}
-            <div className={cn(
-              "absolute inset-0 z-10 backdrop-blur-[2px]",
-              darkMode ? "bg-black/40" : "bg-white/10"
-            )} />
           </div>
 
-          {/* Week Days Header */}
-          <div className="relative z-20 grid grid-cols-7 gap-2 px-4 pt-6 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">
-            {weekDays.map((day) => <div key={day}>{day}</div>)}
-          </div>
+          <div className="relative z-10 overflow-hidden rounded-[inherit] bg-black/12 p-3 backdrop-blur-3xl sm:p-4">
+            <div className="pointer-events-none absolute inset-0 z-10 rounded-[inherit] bg-[linear-gradient(180deg,rgba(2,6,23,0.12),rgba(2,6,23,0.26))]" />
 
-          {/* Grid Content */}
-          <div className="relative z-20 p-4 sm:p-5">
-            <AnimatePresence custom={monthDirection} mode="wait">
-              <MotionDiv
-                key={format(monthStart, 'yyyy-MM')}
-                custom={monthDirection}
-                variants={monthVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                className="grid grid-cols-7 gap-2 sm:gap-3"
-              >
-                {days.map((day) => {
-                  const selected = isSelected(day);
-                  const inRange = isInRange(day);
-                  const outsideMonth = !isSameMonth(day, monthStart);
-                  const hovered = isHovered(day);
+            <div className="relative z-20 grid grid-cols-7 gap-2 px-2 pb-4 pt-2 text-center text-[10px] font-bold uppercase tracking-[0.24em] text-white/42">
+              {weekDays.map((day) => (
+                <div key={day}>{day}</div>
+              ))}
+            </div>
 
-                  return (
-                    <MotionDiv key={day.toISOString()} variants={dayVariants} className="relative aspect-square">
-                      {/* Range Background */}
-                      {inRange && !selected && (
-                        <div 
-                          className="pointer-events-none absolute inset-y-[15%] inset-x-0 z-0 opacity-40"
-                          style={{ background: theme.accent }}
-                        />
-                      )}
+            <div className="relative z-20">
+              <AnimatePresence custom={monthDirection} mode="wait">
+                <MotionDiv
+                  key={format(monthStart, 'yyyy-MM')}
+                  custom={monthDirection}
+                  variants={monthVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  className="grid grid-cols-7 gap-2"
+                >
+                  {days.map((day) => {
+                    const selected = isSelected(day);
+                    const inRange = isInRange(day);
+                    const outsideMonth = !isSameMonth(day, monthStart);
+                    const hovered = isHovered(day);
 
-                      <MotionButton
-                        whileHover={{ y: -4, scale: 1.1, backgroundColor: "rgba(255,255,255,0.15)" }}
-                        whileTap={{ scale: 0.94 }}
-                        onMouseEnter={() => setHoveredDate(day)}
-                        onMouseLeave={() => setHoveredDate(null)}
-                        onClick={() => handleDateClick(day)}
-                        className={cn(
-                          'relative z-10 flex h-full w-full items-center justify-center rounded-full border text-sm font-semibold transition-all duration-300 backdrop-blur-sm',
-                          darkMode 
-                            ? (outsideMonth ? 'border-white/5 bg-white/5 text-white/20' : 'border-white/15 bg-white/10 text-white shadow-xl')
-                            : (outsideMonth ? 'border-black/5 bg-black/5 text-black/20' : 'border-white/40 bg-white/30 text-slate-900 shadow-md'),
-                          selected && 'border-white/40 shadow-2xl'
+                    return (
+                      <MotionDiv key={day.toISOString()} variants={dayVariants} className="relative aspect-square">
+                        {inRange && !selected && (
+                          <div
+                            className="pointer-events-none absolute inset-0 z-0 rounded-full opacity-36"
+                            style={{ backgroundColor: theme.accent }}
+                          />
                         )}
-                        style={{
-                          background: selected ? `linear-gradient(135deg, ${theme.accent}, rgba(255,255,255,0.9))` : undefined,
-                          color: selected ? '#000' : undefined,
-                          borderColor: hovered && !selected ? theme.accent : undefined
-                        }}
-                      >
-                        <span className="relative z-10">{format(day, 'd')}</span>
-                      </MotionButton>
-                    </MotionDiv>
-                  );
-                })}
-              </MotionDiv>
-            </AnimatePresence>
+
+                        <MotionButton
+                          whileHover={{ y: -3, scale: 1.06 }}
+                          whileTap={{ scale: 0.94 }}
+                          onMouseEnter={() => setHoveredDate(day)}
+                          onMouseLeave={() => setHoveredDate(null)}
+                          onClick={() => handleDateClick(day)}
+                          className={cn(
+                            'relative z-10 flex h-full w-full items-center justify-center overflow-hidden rounded-full border text-sm font-semibold transition-all duration-300 backdrop-blur-sm',
+                            outsideMonth
+                              ? 'border-white/5 bg-white/[0.04] text-white/18'
+                              : 'border-white/10 bg-white/[0.08] text-white shadow-xl',
+                            selected && 'border-white/20 text-slate-950 shadow-2xl',
+                            hovered && !selected && 'bg-white/[0.14]',
+                          )}
+                          style={{
+                            backgroundColor: selected
+                              ? theme.accent
+                              : undefined,
+                            borderColor: hovered && !selected ? theme.accent : undefined,
+                          }}
+                        >
+                          <span className="relative z-10">{format(day, 'd')}</span>
+                        </MotionButton>
+                      </MotionDiv>
+                    );
+                  })}
+                </MotionDiv>
+              </AnimatePresence>
+            </div>
           </div>
         </div>
 
-        {/* Bottom Status Info */}
-        <div className="grid grid-cols-3 gap-3 rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-md">
+        <div className="grid grid-cols-3 gap-3 rounded-[1.8rem] bg-white/[0.03] p-4 backdrop-blur-3xl">
           {[
-            { label: 'Selected', val: startDate ? format(startDate, 'MMM d') : 'None' },
-            { label: 'Range End', val: endDate ? format(endDate, 'MMM d') : 'Single day' },
-            { label: 'Preview', val: hoveredDate ? format(hoveredDate, 'MMM d') : '—' }
-          ].map((item, i) => (
-            <div key={i}>
-              <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold">{item.label}</p>
-              <p className="mt-1 text-sm font-medium text-white">{item.val}</p>
+            { label: 'Selected', value: startDate ? format(startDate, 'MMM d') : 'None' },
+            { label: 'Range End', value: endDate ? format(endDate, 'MMM d') : 'Single' },
+            { label: 'Preview', value: hoveredDate ? format(hoveredDate, 'MMM d') : 'None' },
+          ].map((item) => (
+            <div key={item.label}>
+              <p className="text-[0.62rem] uppercase tracking-[0.32em] text-white/38">{item.label}</p>
+              <p className="mt-2 text-sm font-medium text-white">{item.value}</p>
             </div>
           ))}
         </div>
